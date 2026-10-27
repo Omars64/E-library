@@ -4,7 +4,7 @@ import { FormEvent, useState } from "react";
 import Image from "next/image";
 import styles from "./login.module.css";
 
-type LoginResponse = { user?: { role: string }; error?: string; message?: string };
+type LoginResponse = { error?: string; message?: string };
 
 export default function LoginPage() {
   const [identifier, setIdentifier] = useState("");
@@ -30,7 +30,7 @@ export default function LoginPage() {
         setError(result.error || result.message || "We couldn't sign you in. Check your details and try again.");
         return;
       }
-      window.location.assign(result.user?.role?.toLowerCase() === "admin" ? "/admin" : "/");
+      window.location.assign("/");
     } catch {
       setError("We couldn't reach E-library. Check your connection and try again.");
     } finally {
@@ -53,7 +53,7 @@ export default function LoginPage() {
       </section>
 
       <section className={styles.loginPanel} aria-labelledby="login-title">
-        <div className={styles.panelTop}><span className={styles.panelIcon} aria-hidden="true">✦</span><span>PRIVATE LIBRARY</span></div>
+        <div className={styles.panelTop}><Image className={styles.panelIcon} src="/e-library-logo.png" alt="" width={30} height={30} /><span>PRIVATE LIBRARY</span></div>
         <h2 id="login-title">Welcome back</h2>
         <p className={styles.panelDescription}>Sign in to pick up where you left off.</p>
         <form onSubmit={submit} noValidate>

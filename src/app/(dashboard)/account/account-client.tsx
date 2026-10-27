@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import Image from "next/image";
 import styles from "./account.module.css";
 
 export default function AccountClient({ email, username }: { email: string; username: string }) {
@@ -35,6 +36,7 @@ export default function AccountClient({ email, username }: { email: string; user
 
   return <main className={styles.page}>
     <div className={styles.wrap}>
+      <a className={styles.brand} href="/"><Image src="/e-library-logo.png" alt="" width={38} height={38} /> E-library</a>
       <a className={styles.back} href="/">← Back to library</a>
       <p className={styles.eyebrow}>YOUR ACCOUNT</p>
       <h1>Account settings</h1>

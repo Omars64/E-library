@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import styles from "./admin.module.css";
+import Image from "next/image";
 
 type User = { id: string; email: string; username: string; name?: string | null; role: string; createdAt: string };
 type UserResult = { users?: User[]; user?: User; error?: string; message?: string };
@@ -78,7 +79,7 @@ export default function AdminClient() {
   return (
     <main className={styles.main}>
       <header className={styles.header}>
-        <div><p className={styles.eyebrow}>E-LIBRARY / ADMINISTRATION</p><h1>People & access</h1><p className={styles.lead}>Invite readers to their own private library. New accounts can only be created here.</p></div>
+        <div><a className={styles.brand} href="/"><Image src="/e-library-logo.png" alt="" width={38} height={38} /> E-library</a><p className={styles.eyebrow}>E-LIBRARY / ADMINISTRATION</p><h1>People & access</h1><p className={styles.lead}>Invite readers to their own private library. New accounts can only be created here.</p></div>
         <a className={styles.back} href="/">← Back to library</a>
       </header>
       <div className={styles.grid}>

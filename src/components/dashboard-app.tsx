@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { upload } from "@vercel/blob/client";
 import Image from "next/image";
 import { BookCover, BOOK_PALETTES } from "./book-cover";
@@ -75,6 +75,8 @@ export function DashboardApp() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All topics");
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const accountMenuRef = useRef<HTMLDivElement>(null);
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [uploadOpen, setUploadOpen] = useState(false);
   const [collectionOpen, setCollectionOpen] = useState(false);
@@ -118,6 +120,21 @@ export function DashboardApp() {
   useEffect(() => { document.documentElement.dataset.theme = theme; localStorage.setItem("elibrary-theme", theme); }, [theme]);
   useEffect(() => { setSearch(""); setCategory("All topics"); setMobileOpen(false); }, [view]);
   useEffect(() => { if (!notice) return; const id = window.setTimeout(() => setNotice(""), 4500); return () => window.clearTimeout(id); }, [notice]);
+  useEffect(() => {
+    if (!accountMenuOpen) return;
+    function closeOnOutsideClick(event: PointerEvent) {
+      if (!accountMenuRef.current?.contains(event.target as Node)) setAccountMenuOpen(false);
+    }
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setAccountMenuOpen(false);
+    }
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [accountMenuOpen]);
 
   const entries = catalog[view] ?? [];
   const categories = useMemo(() => ["All topics", ...new Set(entries.map((item) => item.category).filter((x): x is string => Boolean(x)))], [entries]);
@@ -146,10 +163,10 @@ export function DashboardApp() {
         <nav>{NAV.filter((item) => item.group === "explore").map((item) => <button key={item.id} className={`nav-item ${view === item.id ? "nav-item--active" : ""}`} onClick={() => setView(item.id)} aria-current={view === item.id ? "page" : undefined}><span className="nav-icon" aria-hidden="true">{item.icon}</span>{item.label}</button>)}</nav>
         <div className="sidebar-section-label">YOUR SPACE</div>
         <nav>{NAV.filter((item) => item.group === "personal").map((item) => <button key={item.id} className={`nav-item ${view === item.id ? "nav-item--active" : ""}`} onClick={() => setView(item.id)} aria-current={view === item.id ? "page" : undefined}><span className="nav-icon" aria-hidden="true">{item.icon}</span>{item.label}</button>)}</nav>
-        <div className="sidebar-bottom"><div className="sidebar-quote"><span>“</span><p>A little knowledge.<br />A lasting light.</p></div><button className="nav-item" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}><span className="nav-icon" aria-hidden="true">◐</span>{theme === "dark" ? "Light appearance" : "Dark appearance"}</button><a className="nav-item" href="/account"><span className="nav-icon" aria-hidden="true">◉</span>Account</a>{user?.role === "admin" && <a className="nav-item" href="/admin"><span className="nav-icon" aria-hidden="true">⚙</span>Admin studio</a>}<button className="nav-item" onClick={() => void logout()}><span className="nav-icon" aria-hidden="true">↪</span>Sign out</button></div>
+        <div className="sidebar-bottom"><div className="sidebar-quote"><span>“</span><p>A little knowledge.<br />A lasting light.</p></div></div>
       </aside>
       <div className="app-main">
-        <header className="topbar"><button className="topbar-menu" aria-label="Open menu" onClick={() => setMobileOpen(true)}>☰</button><div className="topbar-path"><span>YOUR LIBRARY</span><b>/</b><strong>{NAV.find((item) => item.id === view)?.label}</strong></div><div className="topbar-actions"><span className="sync-indicator"><i />Your space, in sync</span><a className="avatar-button" href="/account" title={user ? `${user.username} · ${user.email}` : "Account"} aria-label="Account settings">{user?.username?.slice(0, 2).toUpperCase() || "EL"}</a></div></header>
+        <header className="topbar"><button className="topbar-menu" aria-label="Open menu" onClick={() => setMobileOpen(true)}>☰</button><Image className="topbar-logo" src="/e-library-logo.png" alt="E-library" width={28} height={28} /><div className="topbar-path"><span>YOUR LIBRARY</span><b>/</b><strong>{NAV.find((item) => item.id === view)?.label}</strong></div><div className="topbar-actions"><span className="sync-indicator"><i />Your space, in sync</span><div className="account-menu-wrap" ref={accountMenuRef}><button className="avatar-button" type="button" title={user ? `${user.username} · ${user.email}` : "Account"} aria-label="Open account menu" aria-expanded={accountMenuOpen} aria-controls="account-menu" onClick={() => setAccountMenuOpen((open) => !open)}>{user?.username?.slice(0, 2).toUpperCase() || "EL"}</button>{accountMenuOpen && <div className="account-menu" id="account-menu"><div className="account-menu__identity"><strong>{user?.username || "Reader"}</strong><small>{user?.email}</small></div><button type="button" onClick={() => { setTheme(theme === "dark" ? "light" : "dark"); setAccountMenuOpen(false); }}><span aria-hidden="true">◐</span>{theme === "dark" ? "Light appearance" : "Dark appearance"}</button><a href="/account"><span aria-hidden="true">◉</span>Account</a>{user?.role?.split(",").includes("admin") && <a href="/admin"><span aria-hidden="true">⚙</span>Admin studio</a>}<button type="button" onClick={() => void logout()}><span aria-hidden="true">↪</span>Sign out</button></div>}</div></div></header>
         <main className="content-wrap">
           {error && <div className="status-banner status-banner--error" role="alert">{error}<button onClick={() => void reload()}>Retry</button></div>}
           {notice && <div className="status-banner" role="status">{notice}<button onClick={() => setNotice("")} aria-label="Dismiss">×</button></div>}
