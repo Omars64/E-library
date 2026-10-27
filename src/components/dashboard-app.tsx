@@ -178,7 +178,7 @@ export function DashboardApp() {
             {view === "notes" && <NotesWorkspace notes={notes} selected={selectedNote} setSelected={setSelectedNote} onChanged={() => void reload()} onError={showError} />}
             {view === "collections" && <CollectionsPage collections={collections} onAdd={() => setCollectionOpen(true)} onChanged={() => void reload()} onError={showError} />}
           </>}
-          <footer className="app-footer"><span>E-LIBRARY © {new Date().getFullYear()}</span><span>Made for the things you want to return to.</span></footer>
+          <footer className="app-footer"><span>E-Library (by Omar Solanki) © {new Date().getFullYear()}. All Rights Reserved.</span></footer>
         </main>
       </div>
       {uploadOpen && <UploadBookDialog onClose={() => setUploadOpen(false)} onSuccess={() => { setUploadOpen(false); setNotice("Book added to your shelf."); void reload(); setView("books"); }} />}
