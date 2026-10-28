@@ -21,8 +21,8 @@ export async function POST(request: NextRequest) {
   if (!kinds.has(kind) || !itemId || itemId.length > 100) return invalid("Invalid favourite");
   const item = await requireDatabase().query(kind === "books"
     ? "SELECT 1 FROM books WHERE id=$1 AND owner_id=$2 AND status='ready'"
-    : "SELECT 1 FROM catalog_entries WHERE id=$1 AND kind=$2",
-    [itemId,kind === "books" ? user.id : kind]);
+    : "SELECT 1 FROM catalog_entries WHERE id=$1 AND kind=$2 AND (owner_id IS NULL OR owner_id=$3)",
+    kind === "books" ? [itemId,user.id] : [itemId,kind,user.id]);
   if (!item.rowCount) return invalid("Item does not exist");
   await requireDatabase().query(
     "INSERT INTO favorites(owner_id,item_kind,item_id) VALUES($1,$2,$3) ON CONFLICT DO NOTHING", [user.id,kind,itemId]);

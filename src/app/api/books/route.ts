@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
   if (!title || title.length > 200 || author.length > 120 || description.length > 2000) return invalid("Check the title, author and description lengths");
   if (!palettes.has(palette)) return invalid("Choose a cover palette");
   if (!format || !formats.get(format)?.includes(mimeType)) return invalid("Upload a PDF or DOCX file");
-  if (!Number.isInteger(byteSize) || byteSize < 100 || byteSize > 50 * 1024 * 1024) return invalid("File must be between 100 bytes and 50 MB");
+  if (!Number.isInteger(byteSize) || byteSize < 100 || byteSize > 250 * 1024 * 1024) return invalid("File must be between 100 bytes and 250 MB");
   if (filename.length > 255 || /[\\/\u0000-\u001f]/.test(filename)) return invalid("Invalid filename");
   const id = randomUUID();
   const uploadPath = `books/${user.id}/${id}.${format}`;

@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
       COALESCE(json_agg(json_build_object('kind',i.item_kind,'id',i.item_id,
         'title',COALESCE(ce.title,b.title))) FILTER (WHERE i.item_id IS NOT NULL),'[]') AS items
      FROM collections c LEFT JOIN collection_items i ON i.collection_id=c.id
-     LEFT JOIN catalog_entries ce ON i.item_kind<>'books' AND ce.id=i.item_id
+     LEFT JOIN catalog_entries ce ON i.item_kind<>'books' AND ce.id=i.item_id AND (ce.owner_id IS NULL OR ce.owner_id=c.owner_id)
      LEFT JOIN books b ON i.item_kind='books' AND b.id::text=i.item_id AND b.owner_id=c.owner_id
      WHERE c.owner_id=$1 GROUP BY c.id ORDER BY c.created_at DESC LIMIT 500`, [user.id]);
   return NextResponse.json({ collections: result.rows });

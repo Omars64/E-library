@@ -25,7 +25,7 @@ export function BookCover({ title, author, palette = "burgundy", compact = false
   } as CSSProperties;
 
   return (
-    <div className={`book-cover ${compact ? "book-cover--compact" : ""}`} style={style} aria-label={`${title} book cover`}>
+    <div className={`book-cover ${compact ? "book-cover--compact" : ""}`} data-title-size={title.length > 120 ? "small" : title.length > 60 ? "medium" : "normal"} style={style} aria-label={`${title} book cover`}>
       <span className="book-cover__motif" aria-hidden="true">✦</span>
       <span className="book-cover__rule" aria-hidden="true" />
       <strong style={{ fontSize: title.length > 90 ? "clamp(10px, 1vw, 15px)" : title.length > 50 ? "clamp(12px, 1.3vw, 19px)" : undefined }}>{title}</strong>

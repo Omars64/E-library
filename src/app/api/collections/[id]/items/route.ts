@@ -8,8 +8,8 @@ const kinds = new Set(["duas","hadiths","quotes","books"]);
 async function validItem(ownerId: string, kind: string, itemId: string) {
   const query = kind === "books"
     ? "SELECT 1 FROM books WHERE id=$1 AND owner_id=$2 AND status='ready'"
-    : "SELECT 1 FROM catalog_entries WHERE id=$1 AND kind=$2";
-  const result = await requireDatabase().query(query, [itemId,kind === "books" ? ownerId : kind]);
+    : "SELECT 1 FROM catalog_entries WHERE id=$1 AND kind=$2 AND (owner_id IS NULL OR owner_id=$3)";
+  const result = await requireDatabase().query(query, kind === "books" ? [itemId,ownerId] : [itemId,kind,ownerId]);
   return Boolean(result.rowCount);
 }
 
