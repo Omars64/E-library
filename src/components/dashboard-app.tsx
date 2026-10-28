@@ -64,18 +64,33 @@ function formatDate(value?: string) {
   return Number.isNaN(date.valueOf()) ? "Recently updated" : new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", year: "numeric" }).format(date);
 }
 
-export function DashboardApp() {
-  const [view, setView] = useState<View>("overview");
-  const [navigationReady, setNavigationReady] = useState(false);
+function validView(value?: string): View {
+  return value && (NAV.some((item) => item.id === value) || (value.startsWith("custom:") && value.length > 7 && value.length <= 47)) ? value as View : "overview";
+}
+
+export function DashboardApp({ initialView }: { initialView?: string }) {
+  const [view, setViewState] = useState<View>(() => validView(initialView));
+  const setView = useCallback((next: View) => {
+    const url = new URL(window.location.href);
+    url.searchParams.set("view", next);
+    url.hash = "";
+    window.history.replaceState(null, "", url);
+    setViewState(next);
+  }, []);
   const [customSections, setCustomSections] = useState<string[]>([]);
   useEffect(() => {
-    const restore = () => { const value = decodeURIComponent(window.location.hash.slice(1)).split("/")[0]; if (NAV.some((item) => item.id === value) || value.startsWith("custom:")) setView(value as View); else setView("overview"); };
-    restore(); setNavigationReady(true);
+    const restore = () => {
+      const url = new URL(window.location.href);
+      let legacy = "";
+      try { legacy = decodeURIComponent(url.hash.slice(1)); } catch { /* invalid legacy link */ }
+      setView(validView(legacy || url.searchParams.get("view") || undefined));
+    };
+    restore();
+    window.addEventListener("popstate", restore);
     window.addEventListener("hashchange", restore);
     void fetch("/api/preferences").then(async (r) => { if (r.ok) setCustomSections((await r.json()).sections); }).catch(() => {});
-    return () => window.removeEventListener("hashchange", restore);
-  }, []);
-  useEffect(() => { if (navigationReady) window.history.replaceState(null, "", "#" + encodeURIComponent(view)); }, [view, navigationReady]);
+    return () => { window.removeEventListener("popstate", restore); window.removeEventListener("hashchange", restore); };
+  }, [setView]);
   const [user, setUser] = useState<User | null>(null);
   const [books, setBooks] = useState<Book[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
