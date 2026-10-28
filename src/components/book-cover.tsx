@@ -28,8 +28,8 @@ export function BookCover({ title, author, palette = "burgundy", compact = false
     <div className={`book-cover ${compact ? "book-cover--compact" : ""}`} style={style} aria-label={`${title} book cover`}>
       <span className="book-cover__motif" aria-hidden="true">✦</span>
       <span className="book-cover__rule" aria-hidden="true" />
-      <strong>{title}</strong>
-      <span className="book-cover__author">{author || "E-library"}</span>
+      <strong style={{ fontSize: title.length > 90 ? "clamp(10px, 1vw, 15px)" : title.length > 50 ? "clamp(12px, 1.3vw, 19px)" : undefined }}>{title}</strong>
+      {author && <span className="book-cover__author">{author}</span>}
       <span className="book-cover__imprint">E · LIBRARY</span>
     </div>
   );

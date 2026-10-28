@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import Image from "next/image";
+import { SidebarSettings } from "@/components/sidebar-settings";
 import styles from "./account.module.css";
 
 export default function AccountClient({ email, username }: { email: string; username: string }) {
@@ -39,9 +40,9 @@ export default function AccountClient({ email, username }: { email: string; user
       <a className={styles.brand} href="/"><Image src="/e-library-logo.png" alt="" width={38} height={38} /> E-library</a>
       <a className={styles.back} href="/">← Back to library</a>
       <p className={styles.eyebrow}>YOUR ACCOUNT</p>
-      <h1>Account settings</h1>
+      <h1>Settings</h1>
       <p className={styles.lead}>Keep your private reading space secure.</p>
-      <div className={styles.grid}>
+      <SidebarSettings /><details className="settings-group"><summary>Account settings</summary><div className={styles.grid}>
         <section className={styles.panel} aria-labelledby="profile-title">
           <h2 id="profile-title">Your profile</h2>
           <dl><dt>Email</dt><dd>{email}</dd><dt>Username</dt><dd>@{username}</dd></dl>
@@ -62,7 +63,7 @@ export default function AccountClient({ email, username }: { email: string; user
             <button type="submit" disabled={busy || !currentPassword || !newPassword || !confirmPassword}>{busy ? "Updating…" : "Update password"}</button>
           </form>
         </section>
-      </div>
+      </div></details>
     </div>
   </main>;
 }

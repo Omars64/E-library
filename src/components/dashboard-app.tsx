@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type
 import { upload } from "@vercel/blob/client";
 import Image from "next/image";
 import { BookCover, BOOK_PALETTES } from "./book-cover";
+import { PdfReader } from "./pdf-reader";
+import { CustomSection } from "./custom-section";
 import { NotesWorkspace } from "./notes-workspace";
 
 type View = "overview" | "duas" | "hadiths" | "quotes" | "books" | "reader" | "notes" | "collections";
@@ -64,6 +66,16 @@ function formatDate(value?: string) {
 
 export function DashboardApp() {
   const [view, setView] = useState<View>("overview");
+  const [navigationReady, setNavigationReady] = useState(false);
+  const [customSections, setCustomSections] = useState<string[]>([]);
+  useEffect(() => {
+    const restore = () => { const value = decodeURIComponent(window.location.hash.slice(1)).split("/")[0]; if (NAV.some((item) => item.id === value) || value.startsWith("custom:")) setView(value as View); else setView("overview"); };
+    restore(); setNavigationReady(true);
+    window.addEventListener("hashchange", restore);
+    void fetch("/api/preferences").then(async (r) => { if (r.ok) setCustomSections((await r.json()).sections); }).catch(() => {});
+    return () => window.removeEventListener("hashchange", restore);
+  }, []);
+  useEffect(() => { if (navigationReady) window.history.replaceState(null, "", "#" + encodeURIComponent(view)); }, [view, navigationReady]);
   const [user, setUser] = useState<User | null>(null);
   const [books, setBooks] = useState<Book[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
@@ -136,6 +148,7 @@ export function DashboardApp() {
     };
   }, [accountMenuOpen]);
 
+  useEffect(() => { if (!selectedBook && books.length) { const id = localStorage.getItem("elibrary-last-book"); setSelectedBook(books.find((book) => book.id === id) ?? null); } }, [books, selectedBook]);
   const entries = catalog[view] ?? [];
   const categories = useMemo(() => ["All topics", ...new Set(entries.map((item) => item.category).filter((x): x is string => Boolean(x)))], [entries]);
   const filteredEntries = entries.filter((item) =>
@@ -150,7 +163,7 @@ export function DashboardApp() {
     window.location.assign("/login");
   }
 
-  function openBook(book: Book) { setSelectedBook(book); setView("reader"); }
+  function openBook(book: Book) { setSelectedBook(book); localStorage.setItem("elibrary-last-book", book.id); setView("reader"); }
   function openNote(note: Note) { setSelectedNote(note); setView("notes"); }
   function showError(message: string) { setNotice(message); }
 
@@ -163,15 +176,16 @@ export function DashboardApp() {
         <nav>{NAV.filter((item) => item.group === "explore").map((item) => <button key={item.id} className={`nav-item ${view === item.id ? "nav-item--active" : ""}`} onClick={() => setView(item.id)} aria-current={view === item.id ? "page" : undefined}><span className="nav-icon" aria-hidden="true">{item.icon}</span>{item.label}</button>)}</nav>
         <div className="sidebar-section-label">YOUR SPACE</div>
         <nav>{NAV.filter((item) => item.group === "personal").map((item) => <button key={item.id} className={`nav-item ${view === item.id ? "nav-item--active" : ""}`} onClick={() => setView(item.id)} aria-current={view === item.id ? "page" : undefined}><span className="nav-icon" aria-hidden="true">{item.icon}</span>{item.label}</button>)}</nav>
+        {customSections.length > 0 && <><div className="sidebar-section-label">PERSONAL SECTIONS</div><nav>{customSections.map((section) => <button key={section} className={`nav-item ${String(view) === `custom:${section}` ? "nav-item--active" : ""}`} onClick={() => setView(`custom:${section}` as View)}><span className="nav-icon" aria-hidden="true">◇</span>{section}</button>)}</nav></>}
         <div className="sidebar-bottom"><div className="sidebar-quote"><span>“</span><p>A little knowledge.<br />A lasting light.</p></div></div>
       </aside>
       <div className="app-main">
-        <header className="topbar"><button className="topbar-menu" aria-label="Open menu" onClick={() => setMobileOpen(true)}>☰</button><Image className="topbar-logo" src="/e-library-logo.png" alt="E-library" width={28} height={28} /><div className="topbar-path"><span>YOUR LIBRARY</span><b>/</b><strong>{NAV.find((item) => item.id === view)?.label}</strong></div><div className="topbar-actions"><span className="sync-indicator"><i />Your space, in sync</span><div className="account-menu-wrap" ref={accountMenuRef}><button className="avatar-button" type="button" title={user ? `${user.username} · ${user.email}` : "Account"} aria-label="Open account menu" aria-expanded={accountMenuOpen} aria-controls="account-menu" onClick={() => setAccountMenuOpen((open) => !open)}>{user?.username?.slice(0, 2).toUpperCase() || "EL"}</button>{accountMenuOpen && <div className="account-menu" id="account-menu"><div className="account-menu__identity"><strong>{user?.username || "Reader"}</strong><small>{user?.email}</small></div><button type="button" onClick={() => { setTheme(theme === "dark" ? "light" : "dark"); setAccountMenuOpen(false); }}><span aria-hidden="true">◐</span>{theme === "dark" ? "Light appearance" : "Dark appearance"}</button><a href="/account"><span aria-hidden="true">◉</span>Account</a>{user?.role?.split(",").includes("admin") && <a href="/admin"><span aria-hidden="true">⚙</span>Admin studio</a>}<button type="button" onClick={() => void logout()}><span aria-hidden="true">↪</span>Sign out</button></div>}</div></div></header>
+        <header className="topbar"><button className="topbar-menu" aria-label="Open menu" onClick={() => setMobileOpen(true)}>☰</button><Image className="topbar-logo" src="/e-library-logo.png" alt="E-library" width={28} height={28} /><div className="topbar-path"><span>YOUR LIBRARY</span><b>/</b><strong>{NAV.find((item) => item.id === view)?.label || String(view).replace("custom:", "")}</strong></div><div className="topbar-actions"><span className="sync-indicator"><i />Your space, in sync</span><div className="account-menu-wrap" ref={accountMenuRef}><button className="avatar-button" type="button" title={user ? `${user.username} · ${user.email}` : "Account"} aria-label="Open account menu" aria-expanded={accountMenuOpen} aria-controls="account-menu" onClick={() => setAccountMenuOpen((open) => !open)}>{user?.username?.slice(0, 2).toUpperCase() || "EL"}</button>{accountMenuOpen && <div className="account-menu" id="account-menu"><div className="account-menu__identity"><strong>{user?.username || "Reader"}</strong><small>{user?.email}</small></div><button type="button" onClick={() => { setTheme(theme === "dark" ? "light" : "dark"); setAccountMenuOpen(false); }}><span aria-hidden="true">◐</span>{theme === "dark" ? "Light appearance" : "Dark appearance"}</button><a href="/settings"><span aria-hidden="true">⚙</span>Settings</a>{user?.role?.split(",").includes("admin") && <a href="/admin"><span aria-hidden="true">⚙</span>Admin studio</a>}<button type="button" onClick={() => void logout()}><span aria-hidden="true">↪</span>Sign out</button></div>}</div></div></header>
         <main className="content-wrap">
           {error && <div className="status-banner status-banner--error" role="alert">{error}<button onClick={() => void reload()}>Retry</button></div>}
           {notice && <div className="status-banner" role="status">{notice}<button onClick={() => setNotice("")} aria-label="Dismiss">×</button></div>}
           {loading ? <div className="loading-state" role="status">Opening your library<span className="loading-dots">...</span></div> : <>
-            {view === "overview" && <Overview user={user} books={books} notes={notes} onNavigate={setView} onAddBook={() => setUploadOpen(true)} onOpenBook={openBook} onOpenNote={openNote} />}
+            {String(view).startsWith("custom:") && <CustomSection key={view} name={String(view).slice(7)} />}{view === "overview" && <Overview user={user} books={books} notes={notes} onNavigate={setView} onAddBook={() => setUploadOpen(true)} onOpenBook={openBook} onOpenNote={openNote} />}
             {(["duas", "hadiths", "quotes"] as View[]).includes(view) && <CatalogPage kind={view} items={filteredEntries} categories={categories} category={category} setCategory={setCategory} search={search} setSearch={setSearch} onReflect={(item) => { setSelectedNote({ id: "", title: `Reflection: ${item.title}`, body: `${item.title}\n${item.source || item.author || ""}\n\nMy reflection:\n` }); setView("notes"); }} onError={showError} onChanged={() => void reload()} collections={collections} />}
             {view === "books" && <BooksPage books={filteredBooks} search={search} setSearch={setSearch} onAdd={() => setUploadOpen(true)} onOpen={openBook} />}
             {view === "reader" && <ReaderPage book={selectedBook} books={books} onChooseBook={openBook} onBrowse={() => setView("books")} onMakeNote={(text) => { setSelectedNote({ id: "", title: `Reading: ${selectedBook?.title || "My book"}`, body: text }); setView("notes"); }} />}
@@ -227,7 +241,7 @@ function ReaderPage({ book, books, onChooseBook, onBrowse, onMakeNote }: { book:
   const [reflection, setReflection] = useState("");
   const url = book?.fileUrl || book?.url || (book ? `/api/books/${encodeURIComponent(book.id)}/file` : "");
   const isWord = Boolean(book && (book.format === "docx" || book.filename?.toLowerCase().endsWith(".docx")));
-  return <><PageHeader eyebrow="THE READING ROOM" title="Read without distraction." description={descriptions.reader} action={book && <button className="btn btn-secondary" onClick={onBrowse}>← All books</button>} />{!book ? <div className="reader-empty"><div className="reader-empty__art">▤</div><h2>Your reading room is ready.</h2><p>Choose a book from your shelf to begin.</p>{books.length ? <div className="reader-choices">{books.slice(0, 4).map((item) => <button key={item.id} onClick={() => onChooseBook(item)}><BookCover title={item.title} author={item.author} palette={item.palette || item.coverColor} compact /><strong>{item.title}</strong></button>)}</div> : <button className="btn btn-primary" onClick={onBrowse}>Browse books</button>}</div> : <div className="reader-shell"><div className="reader-main"><div className="reader-toolbar"><span className="reader-toolbar__title">{book.title}</span><span className="reader-toolbar__spacer" /><a href={url} target="_blank" rel="noopener noreferrer">Open in new tab ↗</a><a href={url} download={book.fileName || book.title}>Download ↓</a></div>{isWord ? <div className="word-preview"><BookCover title={book.title} author={book.author} palette={book.palette || book.coverColor} compact /><h2>{book.title}</h2><p>Word documents can be opened or downloaded from here.</p><a className="btn btn-primary" href={url} target="_blank" rel="noopener noreferrer">Open document ↗</a></div> : <iframe className="pdf-frame" title={`Reading ${book.title}`} src={url} />}</div><aside className="reader-reflection"><div className="eyebrow">A SPACE TO PAUSE</div><h2>What stayed<br />with you?</h2><p>Keep a small thought from this reading. Turn it into a note when you&apos;re ready.</p><label htmlFor="reader-reflection-input">Your reflection</label><textarea id="reader-reflection-input" value={reflection} onChange={(event) => setReflection(event.target.value)} placeholder="A thought worth keeping..." rows={9} /><button className="btn btn-primary" onClick={() => { if (reflection.trim()) { onMakeNote(reflection.trim()); setReflection(""); } }} disabled={!reflection.trim()}>Turn into a note ↗</button></aside></div>}</>;
+  return <><PageHeader eyebrow="THE READING ROOM" title="Read without distraction." description={descriptions.reader} action={book && <button className="btn btn-secondary" onClick={onBrowse}>← All books</button>} />{!book ? <div className="reader-empty"><div className="reader-empty__art">▤</div><h2>Your reading room is ready.</h2><p>Choose a book from your shelf to begin.</p>{books.length ? <div className="reader-choices">{books.slice(0, 4).map((item) => <button key={item.id} onClick={() => onChooseBook(item)}><BookCover title={item.title} author={item.author} palette={item.palette || item.coverColor} compact /><strong>{item.title}</strong></button>)}</div> : <button className="btn btn-primary" onClick={onBrowse}>Browse books</button>}</div> : <div className="reader-shell"><div className="reader-main"><div className="reader-toolbar"><span className="reader-toolbar__title">{book.title}</span><span className="reader-toolbar__spacer" /><a href={url} target="_blank" rel="noopener noreferrer">Open in new tab ↗</a><a href={url} download={book.fileName || book.title}>Download ↓</a></div>{isWord ? <div className="word-preview"><BookCover title={book.title} author={book.author} palette={book.palette || book.coverColor} compact /><h2>{book.title}</h2><p>Word documents can be opened or downloaded from here.</p><a className="btn btn-primary" href={url} target="_blank" rel="noopener noreferrer">Open document ↗</a></div> : <PdfReader key={book.id} url={url} />}</div><aside className="reader-reflection"><div className="eyebrow">A SPACE TO PAUSE</div><h2>What stayed<br />with you?</h2><p>Keep a small thought from this reading. Turn it into a note when you&apos;re ready.</p><label htmlFor="reader-reflection-input">Your reflection</label><textarea id="reader-reflection-input" value={reflection} onChange={(event) => setReflection(event.target.value)} placeholder="A thought worth keeping..." rows={9} /><button className="btn btn-primary" onClick={() => { if (reflection.trim()) { onMakeNote(reflection.trim()); setReflection(""); } }} disabled={!reflection.trim()}>Turn into a note ↗</button></aside></div>}</>;
 }
 
 function NotesPage({ notes, selected, setSelected, search, setSearch, onChanged, onError }: { notes: Note[]; selected: Note | null; setSelected: (value: Note | null) => void; search: string; setSearch: (value: string) => void; onChanged: () => void; onError: (value: string) => void }) {

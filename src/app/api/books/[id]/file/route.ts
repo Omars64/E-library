@@ -15,11 +15,11 @@ export async function GET(request: NextRequest, context: Context) {
   if (!book) return NextResponse.json({ error: "Book not found" }, { status: 404 });
   const file = await get(book.blob_path, { access: "private" });
   if (!file?.stream || file.statusCode !== 200) return NextResponse.json({ error: "File not found" }, { status: 404 });
-  const safeName = String(book.original_filename).replace(/["\\\r\n]/g, "_");
+  const safeName = String(book.original_filename).replace(/[^\x20-\x7e]|["\\]/g, "_");
   return new NextResponse(file.stream, {
     headers: {
       "Content-Type": book.mime_type,
-      "Content-Disposition": `inline; filename="${safeName}"`,
+      "Content-Disposition": `inline; filename="${safeName}"; filename*=UTF-8''${encodeURIComponent(book.original_filename).replace(/['()*]/g, (c) => "%" + c.charCodeAt(0).toString(16))}`,
       "Cache-Control": "private, no-store",
       "X-Content-Type-Options": "nosniff",
     },
