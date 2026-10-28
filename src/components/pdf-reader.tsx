@@ -22,11 +22,16 @@ export function PdfReader({ url }: { url: string }) {
         if (!response.ok) throw new Error(response.status === 401 ? "Your session expired. Sign in again to read this book." : "This file could not be loaded. Retry or download it below.");
         task = pdf.getDocument({ data: new Uint8Array(await response.arrayBuffer()) });
         const loaded = await task.promise;
-        if (!cancelled) setDocument(loaded);
+        if (!cancelled) {
+          const savedPage = Number(localStorage.getItem(`elibrary-page:${url}`)) || 1;
+          setPage(Math.max(1, Math.min(loaded.numPages, savedPage)));
+          setDocument(loaded);
+        }
       } catch (reason) { if (!cancelled) setError(reason instanceof Error ? reason.message : "Could not open this PDF."); }
     })();
     return () => { cancelled = true; controller.abort(); void task?.destroy(); };
   }, [url, attempt]);
+  useEffect(() => { if (document) localStorage.setItem(`elibrary-page:${url}`, String(page)); }, [document, page, url]);
   useEffect(() => {
     if (!document) return;
     let cancelled = false;
